@@ -1,0 +1,329 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Employee {
+  id            String    @id @default(cuid())
+  employeeId    String    @unique @map("employee_id")
+  email         String    @unique
+  password      String
+  fullName      String    @map("full_name")
+  phone         String?
+  address       String?
+  dateOfJoining DateTime  @map("date_of_joining")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  roleId       String @map("role_id")
+  role         Role   @relation(fields: [roleId], references: [id])
+  
+  departmentId String     @map("department_id")
+  department   Department @relation(fields: [departmentId], references: [id])
+  
+  managerId String?   @map("manager_id")
+  manager   Employee? @relation("ManagerSubordinate", fields: [managerId], references: [id])
+  subordinates Employee[] @relation("ManagerSubordinate")
+
+  // Related records
+  salaryDetails    SalaryDetail[]
+  attendanceRecords AttendanceRecord[]
+  leaveRequests    LeaveRequest[]
+  leaveBalances    LeaveBalance[]
+  payrollRecords   PayrollRecord[]
+  assignedTasks    Task[]           @relation("AssignedTasks")
+  createdTasks     Task[]           @relation("CreatedTasks")
+  approvedLeaves   LeaveRequest[]   @relation("ApprovedLeaves")
+  sentNotifications EmailNotification[] @relation("SentNotifications")
+  receivedNotifications EmailNotification[] @relation("ReceivedNotifications")
+
+  @@map("employees")
+}
+
+model Role {
+  id          String @id @default(cuid())
+  roleName    String @unique @map("role_name")
+  roleLevel   Int    @map("role_level")
+  permissions Json
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  employees Employee[]
+
+  @@map("roles")
+}
+
+model Department {
+  id          String    @id @default(cuid())
+  deptName    String    @unique @map("dept_name")
+  deptHeadId  String?   @map("dept_head_id")
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  employees Employee[]
+  tasks     Task[]
+  attendanceSettings AttendanceSettings[]
+
+  @@map("departments")
+}
+
+model SalaryDetail {
+  id            String    @id @default(cuid())
+  employeeId    String    @map("employee_id")
+  baseSalary    Decimal   @map("base_salary")
+  allowances    Decimal   @default(0)
+  otherBenefits Decimal   @default(0) @map("other_benefits")
+  effectiveFrom DateTime  @map("effective_from")
+  effectiveTo   DateTime? @map("effective_to")
+  createdBy     String    @map("created_by")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("salary_details")
+}
+
+model AttendanceRecord {
+  id           String    @id @default(cuid())
+  employeeId   String    @map("employee_id")
+  date         DateTime  @db.Date
+  checkInTime  DateTime? @map("check_in_time")
+  checkOutTime DateTime? @map("check_out_time")
+  workHours    Decimal?  @map("work_hours")
+  status       AttendanceStatus
+  notes        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@map("attendance_records")
+}
+
+model AttendanceSettings {
+  id                 String     @id @default(cuid())
+  departmentId       String     @map("department_id")
+  standardWorkHours  Decimal    @default(8.00) @map("standard_work_hours")
+  checkInTime        DateTime   @map("check_in_time") @db.Time
+  checkOutTime       DateTime   @map("check_out_time") @db.Time
+  gracePeriodMins    Int        @default(15) @map("grace_period_mins")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  department Department @relation(fields: [departmentId], references: [id])
+
+  @@map("attendance_settings")
+}
+
+model LeaveRequest {
+  id            String      @id @default(cuid())
+  employeeId    String      @map("employee_id")
+  leaveType     LeaveType   @map("leave_type")
+  startDate     DateTime    @map("start_date") @db.Date
+  endDate       DateTime    @map("end_date") @db.Date
+  totalDays     Int         @map("total_days")
+  reason        String
+  status        LeaveStatus @default(PENDING)
+  approvedBy    String?     @map("approved_by")
+  approvalDate  DateTime?   @map("approval_date")
+  approvalNotes String?     @map("approval_notes")
+  appliedAt     DateTime    @default(now()) @map("applied_at")
+
+  employee Employee  @relation(fields: [employeeId], references: [id])
+  approver Employee? @relation("ApprovedLeaves", fields: [approvedBy], references: [id])
+
+  @@map("leave_requests")
+}
+
+model LeaveBalance {
+  id           String @id @default(cuid())
+  employeeId   String @map("employee_id")
+  year         Int
+  casualLeaves Int    @default(12) @map("casual_leaves")
+  sickLeaves   Int    @default(12) @map("sick_leaves")
+  annualLeaves Int    @default(21) @map("annual_leaves")
+  usedCasual   Int    @default(0) @map("used_casual")
+  usedSick     Int    @default(0) @map("used_sick")
+  usedAnnual   Int    @default(0) @map("used_annual")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, year])
+  @@map("leave_balances")
+}
+
+model PayrollRecord {
+  id          String        @id @default(cuid())
+  employeeId  String        @map("employee_id")
+  month       String        // "2024-01"
+  baseSalary  Decimal       @map("base_salary")
+  allowances  Decimal       @default(0)
+  bonus       Decimal       @default(0)
+  deductions  Decimal       @default(0)
+  grossSalary Decimal       @map("gross_salary")
+  netSalary   Decimal       @map("net_salary")
+  payslipUrl  String?       @map("payslip_url")
+  generatedBy String?       @map("generated_by")
+  generatedAt DateTime?     @map("generated_at")
+  status      PayrollStatus @default(DRAFT)
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month])
+  @@map("payroll_records")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  priority    Priority   @default(MEDIUM)
+  status      TaskStatus @default(PENDING)
+  assignedTo  String     @map("assigned_to")
+  assignedBy  String     @map("assigned_by")
+  departmentId String    @map("department_id")
+  dueDate     DateTime?  @map("due_date") @db.Date
+  startedAt   DateTime?  @map("started_at")
+  completedAt DateTime?  @map("completed_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  assignee   Employee @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  assigner   Employee @relation("CreatedTasks", fields: [assignedBy], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+  comments   TaskComment[]
+
+  @@map("tasks")
+}
+
+model TaskComment {
+  id         String   @id @default(cuid())
+  taskId     String   @map("task_id")
+  employeeId String   @map("employee_id")
+  comment    String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task Task @relation(fields: [taskId], references: [id])
+
+  @@map("task_comments")
+}
+
+model EmailNotification {
+  id             String           @id @default(cuid())
+  toEmployeeId   String           @map("to_employee_id")
+  fromEmployeeId String?          @map("from_employee_id")
+  subject        String
+  body           String
+  type           NotificationType
+  status         EmailStatus      @default(PENDING)
+  sentAt         DateTime?        @map("sent_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  toEmployee   Employee  @relation("ReceivedNotifications", fields: [toEmployeeId], references: [id])
+  fromEmployee Employee? @relation("SentNotifications", fields: [fromEmployeeId], references: [id])
+
+  @@map("email_notifications")
+}
+
+model DailyExport {
+  id            String       @id @default(cuid())
+  exportDate    DateTime     @map("export_date") @db.Date
+  exportType    ExportType   @map("export_type")
+  filePath      String?      @map("file_path")
+  googleSheetId String?      @map("google_sheet_id")
+  status        ExportStatus @default(PENDING)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  @@map("daily_exports")
+}
+
+model SystemSetting {
+  id           String   @id @default(cuid())
+  settingKey   String   @unique @map("setting_key")
+  settingValue String   @map("setting_value")
+  description  String?
+  updatedBy    String?  @map("updated_by")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+}
+
+// Enums
+enum AttendanceStatus {
+  ON_TIME
+  LATE
+  EARLY_OUT
+  ABSENT
+  HALF_DAY
+}
+
+enum LeaveType {
+  CASUAL
+  SICK
+  ANNUAL
+  MATERNITY
+  PATERNITY
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PayrollStatus {
+  DRAFT
+  GENERATED
+  SENT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  LEAVE_APPROVAL
+  LEAVE_REJECTION
+  PAYSLIP
+  TASK_ASSIGNMENT
+  GENERAL
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum ExportType {
+  ATTENDANCE
+  TASKS
+  LEAVES
+  PAYROLL
+}
+
+enum ExportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}

@@ -9,6 +9,7 @@ import { AttendanceModule } from './attendance/attendance.module';
 import { LeavesModule } from './leaves/leaves.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AppService } from './app.service';
     DepartmentsModule,
     AttendanceModule,
     LeavesModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [AppService],

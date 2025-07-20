@@ -8,48 +8,48 @@ datasource db {
 }
 
 model Employee {
-  id            String    @id @default(cuid())
-  employeeId    String    @unique @map("employee_id")
-  email         String    @unique
+  id            String   @id @default(cuid())
+  employeeId    String   @unique @map("employee_id")
+  email         String   @unique
   password      String
-  fullName      String    @map("full_name")
+  fullName      String   @map("full_name")
   phone         String?
   address       String?
-  dateOfJoining DateTime  @map("date_of_joining")
-  isActive      Boolean   @default(true) @map("is_active")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  dateOfJoining DateTime @map("date_of_joining")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   // Relations
-  roleId       String @map("role_id")
-  role         Role   @relation(fields: [roleId], references: [id])
-  
+  roleId String @map("role_id")
+  role   Role   @relation(fields: [roleId], references: [id])
+
   departmentId String     @map("department_id")
   department   Department @relation(fields: [departmentId], references: [id])
-  
-  managerId String?   @map("manager_id")
-  manager   Employee? @relation("ManagerSubordinate", fields: [managerId], references: [id])
+
+  managerId    String?    @map("manager_id")
+  manager      Employee?  @relation("ManagerSubordinate", fields: [managerId], references: [id])
   subordinates Employee[] @relation("ManagerSubordinate")
 
   // Related records
-  salaryDetails    SalaryDetail[]
-  attendanceRecords AttendanceRecord[]
-  leaveRequests    LeaveRequest[]
-  leaveBalances    LeaveBalance[]
-  payrollRecords   PayrollRecord[]
-  assignedTasks    Task[]           @relation("AssignedTasks")
-  createdTasks     Task[]           @relation("CreatedTasks")
-  approvedLeaves   LeaveRequest[]   @relation("ApprovedLeaves")
-  sentNotifications EmailNotification[] @relation("SentNotifications")
+  salaryDetails         SalaryDetail[]
+  attendanceRecords     AttendanceRecord[]
+  leaveRequests         LeaveRequest[]
+  leaveBalances         LeaveBalance[]
+  payrollRecords        PayrollRecord[]
+  assignedTasks         Task[]              @relation("AssignedTasks")
+  createdTasks          Task[]              @relation("CreatedTasks")
+  approvedLeaves        LeaveRequest[]      @relation("ApprovedLeaves")
+  sentNotifications     EmailNotification[] @relation("SentNotifications")
   receivedNotifications EmailNotification[] @relation("ReceivedNotifications")
 
   @@map("employees")
 }
 
 model Role {
-  id          String @id @default(cuid())
-  roleName    String @unique @map("role_name")
-  roleLevel   Int    @map("role_level")
+  id          String   @id @default(cuid())
+  roleName    String   @unique @map("role_name")
+  roleLevel   Int      @map("role_level")
   permissions Json
   description String?
   createdAt   DateTime @default(now()) @map("created_at")
@@ -60,26 +60,42 @@ model Role {
 }
 
 model Department {
-  id          String    @id @default(cuid())
-  deptName    String    @unique @map("dept_name")
-  deptHeadId  String?   @map("dept_head_id")
+  id          String   @id @default(cuid())
+  deptName    String   @unique @map("dept_name")
+  deptHeadId  String?  @map("dept_head_id")
   description String?
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
 
-  employees Employee[]
-  tasks     Task[]
+  employees          Employee[]
+  tasks              Task[]
   attendanceSettings AttendanceSettings[]
 
   @@map("departments")
 }
 
 model SalaryDetail {
-  id            String    @id @default(cuid())
-  employeeId    String    @map("employee_id")
-  baseSalary    Decimal   @map("base_salary")
-  allowances    Decimal   @default(0)
-  otherBenefits Decimal   @default(0) @map("other_benefits")
+  id         String @id @default(cuid())
+  employeeId String @map("employee_id")
+
+  // Basic components
+  basicSalary     Decimal @map("basic_salary")
+  hra             Decimal @default(0) // House Rent Allowance
+  fuelAllowance   Decimal @default(0) @map("fuel_allowance")
+  otherAllowances Decimal @default(0) @map("other_allowances")
+
+  // Deductions
+  pfDeduction     Decimal @default(0) @map("pf_deduction")
+  ptDeduction     Decimal @default(0) @map("pt_deduction") // Professional Tax
+  otherDeductions Decimal @default(0) @map("other_deductions")
+
+  // Employee details for payslip
+  bankName      String? @map("bank_name")
+  accountNumber String? @map("account_number")
+  ifscCode      String? @map("ifsc_code")
+  uanNumber     String? @map("uan_number")
+  panNumber     String? @map("pan_number")
+
   effectiveFrom DateTime  @map("effective_from")
   effectiveTo   DateTime? @map("effective_to")
   createdBy     String    @map("created_by")
@@ -91,16 +107,16 @@ model SalaryDetail {
 }
 
 model AttendanceRecord {
-  id           String    @id @default(cuid())
-  employeeId   String    @map("employee_id")
-  date         DateTime  @db.Date
-  checkInTime  DateTime? @map("check_in_time")
-  checkOutTime DateTime? @map("check_out_time")
-  workHours    Decimal?  @map("work_hours")
+  id           String           @id @default(cuid())
+  employeeId   String           @map("employee_id")
+  date         DateTime         @db.Date
+  checkInTime  DateTime?        @map("check_in_time")
+  checkOutTime DateTime?        @map("check_out_time")
+  workHours    Decimal?         @map("work_hours")
   status       AttendanceStatus
   notes        String?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
@@ -109,13 +125,13 @@ model AttendanceRecord {
 }
 
 model AttendanceSettings {
-  id                 String     @id @default(cuid())
-  departmentId       String     @map("department_id")
-  standardWorkHours  Decimal    @default(8.00) @map("standard_work_hours")
-  checkInTime        DateTime   @map("check_in_time") @db.Time
-  checkOutTime       DateTime   @map("check_out_time") @db.Time
-  gracePeriodMins    Int        @default(15) @map("grace_period_mins")
-  createdAt          DateTime   @default(now()) @map("created_at")
+  id                String   @id @default(cuid())
+  departmentId      String   @map("department_id")
+  standardWorkHours Decimal  @default(8.00) @map("standard_work_hours")
+  checkInTime       DateTime @map("check_in_time") @db.Time
+  checkOutTime      DateTime @map("check_out_time") @db.Time
+  gracePeriodMins   Int      @default(15) @map("grace_period_mins")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   department Department @relation(fields: [departmentId], references: [id])
 
@@ -143,15 +159,15 @@ model LeaveRequest {
 }
 
 model LeaveBalance {
-  id           String @id @default(cuid())
-  employeeId   String @map("employee_id")
+  id           String   @id @default(cuid())
+  employeeId   String   @map("employee_id")
   year         Int
-  casualLeaves Int    @default(12) @map("casual_leaves")
-  sickLeaves   Int    @default(12) @map("sick_leaves")
-  annualLeaves Int    @default(21) @map("annual_leaves")
-  usedCasual   Int    @default(0) @map("used_casual")
-  usedSick     Int    @default(0) @map("used_sick")
-  usedAnnual   Int    @default(0) @map("used_annual")
+  casualLeaves Int      @default(12) @map("casual_leaves")
+  sickLeaves   Int      @default(12) @map("sick_leaves")
+  annualLeaves Int      @default(21) @map("annual_leaves")
+  usedCasual   Int      @default(0) @map("used_casual")
+  usedSick     Int      @default(0) @map("used_sick")
+  usedAnnual   Int      @default(0) @map("used_annual")
   createdAt    DateTime @default(now()) @map("created_at")
 
   employee Employee @relation(fields: [employeeId], references: [id])
@@ -161,20 +177,38 @@ model LeaveBalance {
 }
 
 model PayrollRecord {
-  id          String        @id @default(cuid())
-  employeeId  String        @map("employee_id")
-  month       String        // "2024-01"
-  baseSalary  Decimal       @map("base_salary")
-  allowances  Decimal       @default(0)
-  bonus       Decimal       @default(0)
-  deductions  Decimal       @default(0)
-  grossSalary Decimal       @map("gross_salary")
-  netSalary   Decimal       @map("net_salary")
-  payslipUrl  String?       @map("payslip_url")
-  generatedBy String?       @map("generated_by")
-  generatedAt DateTime?     @map("generated_at")
-  status      PayrollStatus @default(DRAFT)
-  createdAt   DateTime      @default(now()) @map("created_at")
+  id String @id @default(cuid())
+  employeeId String @map("employee_id")
+  month String // "2024-05"
+  
+  // Earnings
+  basicSalary Decimal @map("basic_salary")
+  hra Decimal @default(0)
+  fuelAllowance Decimal @default(0) @map("fuel_allowance")
+  performanceIncentive Decimal @default(0) @map("performance_incentive")
+  otherEarnings Decimal @default(0) @map("other_earnings")
+  
+  // Deductions
+  pfDeduction Decimal @default(0) @map("pf_deduction")
+  ptDeduction Decimal @default(0) @map("pt_deduction")
+  otherDeductions Decimal @default(0) @map("other_deductions")
+  
+  // Calculated fields
+  totalEarnings Decimal @map("total_earnings")
+  totalDeductions Decimal @map("total_deductions")
+  netPay Decimal @map("net_pay")
+  
+  // Attendance info
+  totalDays Int @map("total_days")
+  daysPresent Int @map("days_present")
+  arrearDays Int @default(0) @map("arrear_days")
+  lwpDays Decimal @default(0) @map("lwp_days") // Loss of Pay days
+  
+  payslipUrl String? @map("payslip_url")
+  generatedBy String? @map("generated_by")
+  generatedAt DateTime? @map("generated_at")
+  status PayrollStatus @default(DRAFT)
+  createdAt DateTime @default(now()) @map("created_at")
 
   employee Employee @relation(fields: [employeeId], references: [id])
 
@@ -183,23 +217,23 @@ model PayrollRecord {
 }
 
 model Task {
-  id          String     @id @default(cuid())
-  title       String
-  description String?
-  priority    Priority   @default(MEDIUM)
-  status      TaskStatus @default(PENDING)
-  assignedTo  String     @map("assigned_to")
-  assignedBy  String     @map("assigned_by")
-  departmentId String    @map("department_id")
-  dueDate     DateTime?  @map("due_date") @db.Date
-  startedAt   DateTime?  @map("started_at")
-  completedAt DateTime?  @map("completed_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
+  id           String     @id @default(cuid())
+  title        String
+  description  String?
+  priority     Priority   @default(MEDIUM)
+  status       TaskStatus @default(PENDING)
+  assignedTo   String     @map("assigned_to")
+  assignedBy   String     @map("assigned_by")
+  departmentId String     @map("department_id")
+  dueDate      DateTime?  @map("due_date") @db.Date
+  startedAt    DateTime?  @map("started_at")
+  completedAt  DateTime?  @map("completed_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
 
-  assignee   Employee @relation("AssignedTasks", fields: [assignedTo], references: [id])
-  assigner   Employee @relation("CreatedTasks", fields: [assignedBy], references: [id])
-  department Department @relation(fields: [departmentId], references: [id])
+  assignee   Employee      @relation("AssignedTasks", fields: [assignedTo], references: [id])
+  assigner   Employee      @relation("CreatedTasks", fields: [assignedBy], references: [id])
+  department Department    @relation(fields: [departmentId], references: [id])
   comments   TaskComment[]
 
   @@map("tasks")

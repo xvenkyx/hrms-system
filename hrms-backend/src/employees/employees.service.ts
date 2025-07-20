@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
 import { UpdateEmployeeDto } from './dto/update-employee.dto';
@@ -20,7 +25,9 @@ export class EmployeesService {
     });
 
     if (existingEmployee) {
-      throw new ConflictException('Employee with this email or employee ID already exists');
+      throw new ConflictException(
+        'Employee with this email or employee ID already exists',
+      );
     }
 
     // Hash password
@@ -47,12 +54,17 @@ export class EmployeesService {
     });
 
     // Create initial salary detail
+    // Create initial salary detail
     await this.prisma.salaryDetail.create({
       data: {
         employeeId: employee.id,
-        baseSalary: 0,
-        allowances: 0,
-        otherBenefits: 0,
+        basicSalary: 0, // Changed from baseSalary
+        hra: 0,
+        fuelAllowance: 0,
+        otherAllowances: 0,
+        pfDeduction: 0,
+        ptDeduction: 0,
+        otherDeductions: 0,
         effectiveFrom: new Date(createEmployeeDto.dateOfJoining),
         createdBy: creatorId,
       },
@@ -83,18 +95,18 @@ export class EmployeesService {
       where: { id: userId },
       select: { departmentId: true },
     });
-    
+
     if (!currentUser) {
       throw new NotFoundException('Current user not found');
     }
-    
+
     return currentUser.departmentId;
   }
 
   async findAll(currentUserId: string, currentUserRole: string) {
     // Role-based filtering
     let whereClause = {};
-    
+
     if (currentUserRole === 'DEPARTMENT_HEAD') {
       const departmentId = await this.getCurrentUserDepartment(currentUserId);
       whereClause = { departmentId };
@@ -133,7 +145,7 @@ export class EmployeesService {
     });
 
     // Transform the response to remove password and format data
-    return employees.map(employee => {
+    return employees.map((employee) => {
       const { password, ...employeeData } = employee;
       return {
         id: employeeData.id,
@@ -181,13 +193,20 @@ export class EmployeesService {
     // Check permissions
     if (currentUserRole === 'DEPARTMENT_HEAD') {
       const departmentId = await this.getCurrentUserDepartment(currentUserId);
-      
+
       if (employee.department.id !== departmentId) {
-        throw new ForbiddenException('You can only view employees from your department');
+        throw new ForbiddenException(
+          'You can only view employees from your department',
+        );
       }
     } else if (currentUserRole === 'TEAM_LEAD') {
-      if (employee.manager?.id !== currentUserId && employee.id !== currentUserId) {
-        throw new ForbiddenException('You can only view your subordinates or your own profile');
+      if (
+        employee.manager?.id !== currentUserId &&
+        employee.id !== currentUserId
+      ) {
+        throw new ForbiddenException(
+          'You can only view your subordinates or your own profile',
+        );
       }
     } else if (currentUserRole === 'TECHNICAL_EXPERT') {
       if (employee.id !== currentUserId) {
@@ -215,9 +234,18 @@ export class EmployeesService {
     };
   }
 
-  async update(id: string, updateEmployeeDto: UpdateEmployeeDto, currentUserId: string, currentUserRole: string) {
+  async update(
+    id: string,
+    updateEmployeeDto: UpdateEmployeeDto,
+    currentUserId: string,
+    currentUserRole: string,
+  ) {
     // Check if employee exists
-    const existingEmployee = await this.findOne(id, currentUserId, currentUserRole);
+    const existingEmployee = await this.findOne(
+      id,
+      currentUserId,
+      currentUserRole,
+    );
 
     // Check for email/employeeId conflicts
     if (updateEmployeeDto.email || updateEmployeeDto.employeeId) {
@@ -227,16 +255,22 @@ export class EmployeesService {
             { id: { not: id } },
             {
               OR: [
-                updateEmployeeDto.email ? { email: updateEmployeeDto.email } : {},
-                updateEmployeeDto.employeeId ? { employeeId: updateEmployeeDto.employeeId } : {},
-              ].filter(condition => Object.keys(condition).length > 0),
+                updateEmployeeDto.email
+                  ? { email: updateEmployeeDto.email }
+                  : {},
+                updateEmployeeDto.employeeId
+                  ? { employeeId: updateEmployeeDto.employeeId }
+                  : {},
+              ].filter((condition) => Object.keys(condition).length > 0),
             },
           ],
         },
       });
 
       if (conflictEmployee) {
-        throw new ConflictException('Employee with this email or employee ID already exists');
+        throw new ConflictException(
+          'Employee with this email or employee ID already exists',
+        );
       }
     }
 

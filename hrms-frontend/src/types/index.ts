@@ -282,3 +282,126 @@ export interface LeaveQueryParams {
   employeeId?: string;
   departmentId?: string;
 }
+
+// Payroll Types
+export interface PayrollRecord {
+  id: string;
+  employeeId: string;
+  month: string;
+  
+  // Earnings
+  basicSalary: number;
+  hra: number;
+  fuelAllowance: number;
+  performanceIncentive: number;
+  otherEarnings: number;
+  
+  // Deductions
+  pfDeduction: number;
+  ptDeduction: number;
+  otherDeductions: number;
+  
+  // Calculated fields
+  totalEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  
+  // Attendance info
+  totalDays: number;
+  daysPresent: number;
+  arrearDays: number;
+  lwpDays: number;
+  
+  payslipUrl?: string;
+  generatedBy?: string;
+  generatedAt?: string;
+  status: 'DRAFT' | 'GENERATED' | 'SENT';
+  createdAt: string;
+  
+  employee: {
+    id: string;
+    fullName: string;
+    employeeId: string;
+    email: string;
+    department: {
+      deptName: string;
+    };
+  };
+}
+
+export interface CreatePayrollRequest {
+  employeeId: string;
+  month: string;
+  basicSalary: number;
+  hra?: number;
+  fuelAllowance?: number;
+  performanceIncentive?: number;
+  otherEarnings?: number;
+  pfDeduction?: number;
+  ptDeduction?: number;
+  otherDeductions?: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  netPay: number;
+  totalDays: number;
+  daysPresent: number;
+  arrearDays?: number;
+  lwpDays?: number;
+  payslipUrl?: string;
+}
+
+export interface UpdatePayrollRequest extends Partial<CreatePayrollRequest> {}
+
+export interface GeneratePayrollRequest {
+  month: string;
+  employeeIds?: string[];
+  departmentId?: string;
+}
+
+export interface PayrollQueryParams {
+  month?: string;
+  year?: string;
+  employeeId?: string;
+  departmentId?: string;
+  status?: 'DRAFT' | 'GENERATED' | 'SENT';
+}
+
+export interface PayrollSummary {
+  totalRecords: number;
+  totalBasicSalary: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  totalNetPay: number;
+  statusBreakdown: {
+    draft: number;
+    generated: number;
+    sent: number;
+  };
+  departmentBreakdown: Record<string, {
+    count: number;
+    totalNetPay: number;
+    totalEarnings: number;
+    totalDeductions: number;
+  }>;
+}
+
+export interface BulkActionRequest {
+  payrollIds: string[];
+  action: 'DRAFT' | 'GENERATED' | 'SENT';
+}
+
+export interface YearlyStatsData {
+  totalRecords: number;
+  totalNetPay: number;
+  totalEarnings: number;
+  totalDeductions: number;
+  statusCounts: {
+    draft: number;
+    generated: number;
+    sent: number;
+  };
+}
+
+export interface YearlyStats {
+  [month: string]: YearlyStatsData;
+}

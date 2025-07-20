@@ -1,14 +1,26 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  await prisma.payrollRecord.deleteMany();
+  await prisma.leaveRequest.deleteMany();
+  await prisma.attendanceRecord.deleteMany();
+  await prisma.taskComment.deleteMany();
+  await prisma.task.deleteMany();
+  await prisma.salaryDetail.deleteMany();
+  await prisma.leaveBalance.deleteMany();
+  await prisma.attendanceSettings.deleteMany(); // ← must come before department
+  await prisma.employee.deleteMany();
+  await prisma.department.deleteMany();
+  await prisma.role.deleteMany();
+
   console.log('🌱 Starting database seed...');
 
   // Create Roles
   console.log('Creating roles...');
-  
+
   const adminRole = await prisma.role.create({
     data: {
       roleName: 'ADMIN',
@@ -88,7 +100,7 @@ async function main() {
 
   // Create Departments
   console.log('Creating departments...');
-  
+
   const techDept = await prisma.department.create({
     data: {
       deptName: 'TECHNICAL',
@@ -121,9 +133,9 @@ async function main() {
 
   // Create default employees
   console.log('Creating default employees...');
-  
+
   const hashedPassword = await bcrypt.hash('admin123', 10);
-  
+
   const adminUser = await prisma.employee.create({
     data: {
       employeeId: 'ADMIN001',
@@ -165,9 +177,70 @@ async function main() {
 
   console.log('✅ Default employees created');
 
+  // Add salary details
+  console.log('Adding salary details for default employees...');
+
+  await prisma.salaryDetail.createMany({
+    data: [
+      {
+        employeeId: adminUser.id,
+        basicSalary: new Prisma.Decimal(70000),
+        hra: new Prisma.Decimal(15000),
+        fuelAllowance: new Prisma.Decimal(3000),
+        otherAllowances: new Prisma.Decimal(2000),
+        pfDeduction: new Prisma.Decimal(1800),
+        ptDeduction: new Prisma.Decimal(200),
+        otherDeductions: new Prisma.Decimal(500),
+        bankName: 'HDFC Bank',
+        accountNumber: '1234567890',
+        ifscCode: 'HDFC0001234',
+        uanNumber: '100200300400',
+        panNumber: 'ABCDE1234F',
+        effectiveFrom: new Date('2024-01-01'),
+        createdBy: 'seed-script',
+      },
+      {
+        employeeId: hrUser.id,
+        basicSalary: new Prisma.Decimal(60000),
+        hra: new Prisma.Decimal(12000),
+        fuelAllowance: new Prisma.Decimal(2500),
+        otherAllowances: new Prisma.Decimal(1500),
+        pfDeduction: new Prisma.Decimal(1600),
+        ptDeduction: new Prisma.Decimal(200),
+        otherDeductions: new Prisma.Decimal(400),
+        bankName: 'ICICI Bank',
+        accountNumber: '9876543210',
+        ifscCode: 'ICIC0005678',
+        uanNumber: '200300400500',
+        panNumber: 'XYZAB1234C',
+        effectiveFrom: new Date('2024-01-15'),
+        createdBy: 'seed-script',
+      },
+      {
+        employeeId: techHead.id,
+        basicSalary: new Prisma.Decimal(80000),
+        hra: new Prisma.Decimal(16000),
+        fuelAllowance: new Prisma.Decimal(4000),
+        otherAllowances: new Prisma.Decimal(2500),
+        pfDeduction: new Prisma.Decimal(2000),
+        ptDeduction: new Prisma.Decimal(250),
+        otherDeductions: new Prisma.Decimal(600),
+        bankName: 'SBI',
+        accountNumber: '111222333444',
+        ifscCode: 'SBIN0001111',
+        uanNumber: '300400500600',
+        panNumber: 'LMNOP1234D',
+        effectiveFrom: new Date('2024-01-10'),
+        createdBy: 'seed-script',
+      },
+    ],
+  });
+
+  console.log('✅ Salary details added');
+
   // Update department heads
   console.log('Setting department heads...');
-  
+
   await prisma.department.update({
     where: { id: techDept.id },
     data: { deptHeadId: techHead.id },
@@ -182,7 +255,7 @@ async function main() {
 
   // Create Attendance Settings
   console.log('Creating attendance settings...');
-  
+
   await prisma.attendanceSettings.create({
     data: {
       departmentId: techDept.id,
@@ -205,11 +278,11 @@ async function main() {
 
   console.log('✅ Attendance settings created');
 
-  // Create initial leave balances for current year
+  // Create initial leave balances
   console.log('Creating leave balances...');
-  
+
   const currentYear = new Date().getFullYear();
-  
+
   for (const employee of [adminUser, hrUser, techHead]) {
     await prisma.leaveBalance.create({
       data: {
@@ -227,17 +300,11 @@ async function main() {
 
   console.log('✅ Leave balances created');
 
-  console.log('\n🎉 Seed completed successfully!');
-  console.log('\n📋 Login Credentials:');
+  console.log('\\n🎉 Seed completed successfully!');
+  console.log('\\n📋 Login Credentials:');
   console.log('🔐 Admin: admin@company.com / admin123');
   console.log('👥 HR Manager: hr@company.com / admin123');
   console.log('💻 Tech Head: techhead@company.com / admin123');
-  console.log('\n📊 Database contains:');
-  console.log('• 5 Roles (Admin, HR, Dept Head, Team Lead, Tech Expert)');
-  console.log('• 4 Departments (Technical, HR, Sales, Marketing)');
-  console.log('• 3 Default employees with proper hierarchy');
-  console.log('• Attendance settings for each department');
-  console.log('• Leave balances for current year');
 }
 
 main()

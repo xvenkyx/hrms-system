@@ -1,35 +1,87 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useAuthStore } from './stores/authStore';
+import { LoginForm } from './components/forms/LoginForm';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { DashboardLayout } from './components/layouts/DashboardLayout';
+import { Dashboard } from './pages/dashboard/Dashboard';
+import { EmployeesTest } from './pages/employees/EmployeesTest';
+import { AttendancePage } from './pages/attendance/AttendancePage';
+import { LeavesTest } from './pages/leaves/LeavesTest';
+import './index.css';
+
+const queryClient = new QueryClient();
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isAuthenticated } = useAuthStore();
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <QueryClientProvider client={queryClient}>
+      <Router>
+        <Routes>
+          <Route 
+            path="/login" 
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <LoginForm />
+              )
+            } 
+          />
+          
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <Dashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute roles={['ADMIN', 'HR', 'DEPARTMENT_HEAD']}>
+                <DashboardLayout>
+                  <EmployeesTest />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/attendance"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <AttendancePage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/leaves"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout>
+                  <LeavesTest />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route 
+            path="/" 
+            element={<Navigate to="/dashboard" replace />} 
+          />
+        </Routes>
+      </Router>
+    </QueryClientProvider>
+  );
 }
 
-export default App
+export default App;

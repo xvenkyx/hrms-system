@@ -48,4 +48,8 @@ export const employeeApi = {
     const response = await api.get('/departments');
     return response.data;
   },
+  getSalaryDetails: async () => {
+    const res = await api.get("/payroll/salary-details");
+    return res.data;
+  },
 };

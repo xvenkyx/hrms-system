@@ -1462,4 +1462,31 @@ export class PayrollService {
       },
     };
   }
+
+  async getAllSalaryDetails() {
+    return this.prisma.salaryDetail.findMany({
+      orderBy: { effectiveFrom: 'desc' },
+      include: {
+        employee: {
+          select: {
+            id: true,
+            fullName: true,
+            employeeId: true,
+            department: {
+              select: {
+                id: true,
+                deptName: true,
+              },
+            },
+            role: {
+              select: {
+                id: true,
+                roleName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }

@@ -405,3 +405,41 @@ export interface YearlyStatsData {
 export interface YearlyStats {
   [month: string]: YearlyStatsData;
 }
+
+export interface SalaryDetail {
+  id: string;
+  employeeId: string;
+  basicSalary: number;
+  hra: number;
+  fuelAllowance: number;
+  otherAllowances: number;
+
+  pfDeduction: number;
+  ptDeduction: number;
+  otherDeductions: number;
+
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  uanNumber?: string;
+  panNumber?: string;
+
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdBy: string;
+  createdAt: string;
+
+  employee: {
+    id: string;
+    fullName: string;
+    employeeId: string;
+    department?: {
+      id: string;
+      deptName: string;
+    };
+    role?: {
+      id: string;
+      roleName: string;
+    };
+  };
+}

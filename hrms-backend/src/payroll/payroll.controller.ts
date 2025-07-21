@@ -125,4 +125,9 @@ export class PayrollController {
   remove(@Param('id') id: string) {
     return this.payrollService.remove(id);
   }
+
+  @Get('salary-details')
+  async getSalaryDetails() {
+    return this.payrollService.getAllSalaryDetails();
+  }
 }

@@ -1,45 +1,67 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Loader2 } from 'lucide-react';
-import { employeeApi } from '../../lib/employeeApi';
-import type { Employee, Role, Department, Manager } from '../../types';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Loader2 } from "lucide-react";
+import { employeeApi } from "../../lib/employeeApi";
+import type { Employee, Role, Department, Manager } from "../../types";
+import { toast } from "sonner";
 
+// ✅ Schema with working salary validation
 const employeeSchema = z.object({
-  employeeId: z.string().min(3, 'Employee ID must be at least 3 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  employeeId: z.string().min(3),
+  email: z.string().email(),
+  password: z.string().min(6),
+  fullName: z.string().min(2),
   phone: z.string().optional(),
   address: z.string().optional(),
-  dateOfJoining: z.string().min(1, 'Date of joining is required'),
-  roleId: z.string().min(1, 'Role is required'),
-  departmentId: z.string().min(1, 'Department is required'),
+  dateOfJoining: z.string().min(1),
+  roleId: z.string().min(1),
+  departmentId: z.string().min(1),
   managerId: z.string().optional(),
+  // ✅ Nested salaryDetail
+  salaryDetail: z.object({
+    basicSalary: z.string(),
+    effectiveFrom: z.string().optional(),
+  }),
+  // basicSalary: z.string(),
 });
 
 type EmployeeFormData = z.infer<typeof employeeSchema>;
-
 interface EmployeeFormProps {
   employee?: Employee;
   onSuccess: () => void;
   onCancel: () => void;
 }
 
-export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProps) {
+export function EmployeeForm({
+  employee,
+  onSuccess,
+  onCancel,
+}: EmployeeFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('');
+  const [selectedDepartment, setSelectedDepartment] = useState("");
 
   const isEditing = !!employee;
 
@@ -49,36 +71,53 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<EmployeeFormData>({
     resolver: zodResolver(employeeSchema),
-    defaultValues: employee ? {
-      employeeId: employee.employeeId,
-      email: employee.email,
-      fullName: employee.fullName,
-      phone: employee.phone || '',
-      address: employee.address || '',
-      dateOfJoining: employee.dateOfJoining.split('T')[0],
-      roleId: employee.role.id,
-      departmentId: employee.department.id,
-      managerId: employee.manager?.id || '',
-    } : {
-      employeeId: '',
-      email: '',
-      password: '',
-      fullName: '',
-      phone: '',
-      address: '',
-      dateOfJoining: '',
-      roleId: '',
-      departmentId: '',
-      managerId: '',
-    },
+    defaultValues: employee
+      ? {
+          employeeId: employee.employeeId,
+          email: employee.email,
+          fullName: employee.fullName,
+          phone: employee.phone || "",
+          address: employee.address || "",
+          dateOfJoining: employee.dateOfJoining.split("T")[0],
+          roleId: employee.role.id,
+          departmentId: employee.department.id,
+          managerId: employee.manager?.id || "",
+          salaryDetail: {
+            basicSalary: employee.salaryDetails?.[0]?.basicSalary || "",
+            effectiveFrom:
+              employee.salaryDetails?.[0]?.effectiveFrom?.split("T")[0] || "",
+          },
+          // basicSalary: employee.salaryDetails?.[0]?.basicSalary || "",
+        }
+      : {
+          employeeId: "",
+          email: "",
+          password: "",
+          fullName: "",
+          phone: "",
+          address: "",
+          dateOfJoining: "",
+          roleId: "",
+          departmentId: "",
+          managerId: "",
+          salaryDetail: {
+            basicSalary: "",
+            effectiveFrom: "",
+          },
+        },
   });
 
-  const watchedDepartment = watch('departmentId');
+  const watchedSalary = Number(watch("salaryDetail.basicSalary"));
+  const hra = Math.round(watchedSalary * 0.4);
+  const travel = Math.round(watchedSalary * 0.1);
+  const pf = 3600;
+  const pt = 200;
+  const total = watchedSalary + hra + travel - pf - pt;
 
-  // Load initial data
+  const watchedDepartment = watch("departmentId");
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -88,58 +127,42 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
         ]);
         setRoles(rolesData);
         setDepartments(departmentsData);
-
-        if (employee) {
-          setSelectedDepartment(employee.department.id);
-        }
-      } catch (error) {
-        toast.error('Failed to load form data');
+        if (employee) setSelectedDepartment(employee.department.id);
+      } catch {
+        toast.error("Failed to load form data");
       }
     };
-
     loadData();
   }, [employee]);
 
-  // Load managers when department changes
   useEffect(() => {
-    const loadManagers = async () => {
-      if (watchedDepartment) {
-        try {
-          const managersData = await employeeApi.getManagersByDepartment(watchedDepartment);
-          setManagers(managersData);
-          setSelectedDepartment(watchedDepartment);
-        } catch (error) {
-          console.error('Failed to load managers:', error);
-          setManagers([]);
-        }
-      }
-    };
-
     if (watchedDepartment && watchedDepartment !== selectedDepartment) {
-      loadManagers();
-      setValue('managerId', ''); // Reset manager when department changes
+      employeeApi
+        .getManagersByDepartment(watchedDepartment)
+        .then((data) => {
+          setManagers(data);
+          setSelectedDepartment(watchedDepartment);
+        })
+        .catch(() => setManagers([]));
+      setValue("managerId", "");
     }
   }, [watchedDepartment, selectedDepartment, setValue]);
 
   const onSubmit = async (data: EmployeeFormData) => {
     setIsLoading(true);
     try {
-      const submitData = { ...data };
-      if (submitData.managerId === '') {
-        delete submitData.managerId;
-      }
-
+      if (!data.managerId) delete data.managerId;
       if (isEditing) {
-        const { password, ...updateData } = submitData;
-        await employeeApi.updateEmployee(employee.id, updateData);
-        toast.success('Employee updated successfully');
+        const { password, ...updateData } = data;
+        await employeeApi.updateEmployee(employee!.id, updateData);
+        toast.success("Employee updated successfully");
       } else {
-        await employeeApi.createEmployee(submitData as any);
-        toast.success('Employee created successfully');
+        await employeeApi.createEmployee(data);
+        toast.success("Employee created successfully");
       }
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to save employee');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to save employee");
     } finally {
       setIsLoading(false);
     }
@@ -148,9 +171,13 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>{isEditing ? 'Edit Employee' : 'Add New Employee'}</CardTitle>
+        <CardTitle>
+          {isEditing ? "Edit Employee" : "Add New Employee"}
+        </CardTitle>
         <CardDescription>
-          {isEditing ? 'Update employee information' : 'Create a new employee account'}
+          {isEditing
+            ? "Update employee information"
+            : "Create a new employee account"}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -158,28 +185,16 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="employeeId">Employee ID</Label>
-              <Input
-                id="employeeId"
-                placeholder="EMP001"
-                {...register('employeeId')}
-                className={errors.employeeId ? 'border-red-500' : ''}
-              />
+              <Input id="employeeId" {...register("employeeId")} />
               {errors.employeeId && (
-                <p className="text-sm text-red-500">{errors.employeeId.message}</p>
+                <p className="text-red-500">{errors.employeeId.message}</p>
               )}
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="john@company.com"
-                {...register('email')}
-                className={errors.email ? 'border-red-500' : ''}
-              />
+              <Input id="email" type="email" {...register("email")} />
               {errors.email && (
-                <p className="text-sm text-red-500">{errors.email.message}</p>
+                <p className="text-red-500">{errors.email.message}</p>
               )}
             </div>
           </div>
@@ -187,133 +202,129 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
           {!isEditing && (
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter password"
-                {...register('password')}
-                className={errors.password ? 'border-red-500' : ''}
-              />
+              <Input id="password" type="password" {...register("password")} />
               {errors.password && (
-                <p className="text-sm text-red-500">{errors.password.message}</p>
+                <p className="text-red-500">{errors.password.message}</p>
               )}
             </div>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name</Label>
-            <Input
-              id="fullName"
-              placeholder="John Doe"
-              {...register('fullName')}
-              className={errors.fullName ? 'border-red-500' : ''}
-            />
+            <Input id="fullName" {...register("fullName")} />
             {errors.fullName && (
-              <p className="text-sm text-red-500">{errors.fullName.message}</p>
+              <p className="text-red-500">{errors.fullName.message}</p>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone (Optional)</Label>
-              <Input
-                id="phone"
-                placeholder="+1234567890"
-                {...register('phone')}
-              />
+            <div>
+              <Label htmlFor="phone">Phone</Label>
+              <Input id="phone" {...register("phone")} />
             </div>
-
-            <div className="space-y-2">
+            <div>
               <Label htmlFor="dateOfJoining">Date of Joining</Label>
               <Input
                 id="dateOfJoining"
                 type="date"
-                {...register('dateOfJoining')}
-                className={errors.dateOfJoining ? 'border-red-500' : ''}
+                {...register("dateOfJoining")}
               />
               {errors.dateOfJoining && (
-                <p className="text-sm text-red-500">{errors.dateOfJoining.message}</p>
+                <p className="text-red-500">{errors.dateOfJoining.message}</p>
               )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Address (Optional)</Label>
-            <Textarea
-              id="address"
-              placeholder="Enter address"
-              {...register('address')}
-              rows={3}
-            />
+            <Label htmlFor="address">Address</Label>
+            <Textarea id="address" rows={3} {...register("address")} />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="basicSalary">Basic Salary</Label>
+            <Input
+              id="basicSalary"
+              type="number"
+              {...register("salaryDetail.basicSalary")}
+            />
+            {errors.salaryDetail?.basicSalary && (
+              <p className="text-red-500">{errors.salaryDetail?.basicSalary.message}</p>
+            )}
+          </div>
+
+          {/* Salary Preview Card */}
+          <Card className="border bg-gray-50 p-4">
+            <h3 className="text-lg font-semibold mb-2">Salary Preview</h3>
+            <p>Basic: ₹{watchedSalary}</p>
+            <p>HRA (40%): ₹{hra}</p>
+            <p>Travel Allowance (10%): ₹{travel}</p>
+            <p>PF Deduction: ₹{pf}</p>
+            <p>PT Deduction: ₹{pt}</p>
+            <p className="font-semibold mt-2">Net Take Home: ₹{total}</p>
+          </Card>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
+            <div>
               <Label>Department</Label>
               <Select
-                onValueChange={(value) => setValue('departmentId', value)}
-                defaultValue={employee?.department.id || ''}
+                onValueChange={(val) => setValue("departmentId", val)}
+                defaultValue={employee?.department.id}
               >
-                <SelectTrigger className={errors.departmentId ? 'border-red-500' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id}>
-                      {dept.deptName}
+                  {departments.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>
+                      {d.deptName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.departmentId && (
-                <p className="text-sm text-red-500">{errors.departmentId.message}</p>
-              )}
             </div>
-
-            <div className="space-y-2">
+            <div>
               <Label>Role</Label>
               <Select
-                onValueChange={(value) => setValue('roleId', value)}
-                defaultValue={employee?.role.id || ''}
+                onValueChange={(val) => setValue("roleId", val)}
+                defaultValue={employee?.role.id}
               >
-                <SelectTrigger className={errors.roleId ? 'border-red-500' : ''}>
+                <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.roleName}
+                  {roles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.roleName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {errors.roleId && (
-                <p className="text-sm text-red-500">{errors.roleId.message}</p>
-              )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Manager (Optional)</Label>
+            <Label>Manager</Label>
             <Select
-              onValueChange={(value) => setValue('managerId', value === 'none' ? '' : value)}
-              defaultValue={employee?.manager?.id || 'none'}
+              onValueChange={(val) =>
+                setValue("managerId", val === "none" ? "" : val)
+              }
+              defaultValue={employee?.manager?.id || "none"}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select manager" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Manager</SelectItem>
-                {managers.map((manager) => (
-                  <SelectItem key={manager.id} value={manager.id}>
-                    {manager.fullName} ({manager.employeeId}) - {manager.role.roleName}
+                {managers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.fullName} ({m.employeeId}) - {m.role.roleName}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex justify-end space-x-4 pt-4">
+          <div className="flex justify-end pt-4 gap-2">
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
@@ -321,10 +332,12 @@ export function EmployeeForm({ employee, onSuccess, onCancel }: EmployeeFormProp
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isEditing ? 'Updating...' : 'Creating...'}
+                  {isEditing ? "Updating..." : "Creating..."}
                 </>
+              ) : isEditing ? (
+                "Update Employee"
               ) : (
-                isEditing ? 'Update Employee' : 'Create Employee'
+                "Create Employee"
               )}
             </Button>
           </div>

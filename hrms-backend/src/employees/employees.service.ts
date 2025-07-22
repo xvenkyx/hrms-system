@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmployeeDto } from './dto/create-employee.dto';
@@ -33,12 +34,38 @@ export class EmployeesService {
     // Hash password
     const hashedPassword = await bcrypt.hash(createEmployeeDto.password, 10);
 
+    // Extract salary data
+    const { salaryDetail, ...employeeData } = createEmployeeDto;
+    console.log('Salary Details')
+    const basic = salaryDetail?.basicSalary || 0;
+    console.log('Basic : ', basic);
+    const hra = Math.round(basic * 0.3);
+    const fuelAllowance = Math.round(basic * 0.1286);
+    const pf = 3600;
+    const pt = 200;
+    const effectiveFromRaw =
+      salaryDetail?.effectiveFrom || createEmployeeDto.dateOfJoining;
+
+    if (!effectiveFromRaw) {
+      throw new BadRequestException(
+        'effectiveFrom or dateOfJoining must be provided.',
+      );
+    }
+
+    const effectiveFrom = new Date(effectiveFromRaw);
+
     // Create employee
     const employee = await this.prisma.employee.create({
       data: {
-        ...createEmployeeDto,
+        fullName: employeeData.fullName,
+        email: employeeData.email,
+        employeeId: employeeData.employeeId,
         password: hashedPassword,
         dateOfJoining: new Date(createEmployeeDto.dateOfJoining),
+        departmentId: employeeData.departmentId,
+        roleId: employeeData.roleId,
+        phone: employeeData.phone,
+        address: employeeData.address,
       },
       include: {
         role: true,
@@ -53,24 +80,23 @@ export class EmployeesService {
       },
     });
 
-    // Create initial salary detail
-    // Create initial salary detail
+    // Create salary detail
     await this.prisma.salaryDetail.create({
       data: {
         employeeId: employee.id,
-        basicSalary: 0, // Changed from baseSalary
-        hra: 0,
-        fuelAllowance: 0,
+        basicSalary: basic,
+        hra,
+        fuelAllowance,
         otherAllowances: 0,
-        pfDeduction: 0,
-        ptDeduction: 0,
+        pfDeduction: pf,
+        ptDeduction: pt,
         otherDeductions: 0,
-        effectiveFrom: new Date(createEmployeeDto.dateOfJoining),
+        effectiveFrom,
         createdBy: creatorId,
       },
     });
 
-    // Create leave balance for current year
+    // Create leave balance
     const currentYear = new Date().getFullYear();
     await this.prisma.leaveBalance.create({
       data: {

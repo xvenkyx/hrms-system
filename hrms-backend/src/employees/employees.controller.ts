@@ -25,6 +25,7 @@ export class EmployeesController {
   @Post()
   @Roles('ADMIN', 'HR')
   create(@Body() createEmployeeDto: CreateEmployeeDto, @Request() req) {
+    console.log(req.body)
     return this.employeesService.create(createEmployeeDto, req.user.id);
   }
 

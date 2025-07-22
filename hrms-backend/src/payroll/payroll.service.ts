@@ -22,40 +22,60 @@ export class PayrollService {
   ) {
     const { month, employeeIds, departmentId } = generatePayrollDto;
 
-    // Validate month format (YYYY-MM)
+    // ✅ 1. Validate month format
     if (!/^\d{4}-\d{2}$/.test(month)) {
       throw new BadRequestException('Month must be in format YYYY-MM');
     }
 
-    // Check if payroll already exists for this month
-    const existingPayroll = await this.prisma.payrollRecord.findFirst({
-      where: {
-        month,
-        ...(employeeIds && { employeeId: { in: employeeIds } }),
-        ...(departmentId && { employee: { departmentId } }),
-      },
-    });
+    // ✅ 2. Resolve employeeIds from department if not provided
+    let resolvedEmployeeIds: string[] | undefined = employeeIds;
 
-    if (existingPayroll) {
-      throw new BadRequestException(
-        `Payroll already exists for month ${month}`,
-      );
+    if (!resolvedEmployeeIds && departmentId) {
+      const employeesInDept = await this.prisma.employee.findMany({
+        where: {
+          departmentId,
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      resolvedEmployeeIds = employeesInDept.map((e) => e.id);
     }
 
-    // Build employee filter
-    let employeeFilter: any = {
+    // ✅ 3. Check if payroll already exists for any of the employees
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      const existingPayroll = await this.prisma.payrollRecord.findFirst({
+        where: {
+          month,
+          employeeId: { in: resolvedEmployeeIds },
+        },
+      });
+
+      if (existingPayroll) {
+        throw new BadRequestException(
+          `Payroll already exists for some employees in ${month}`,
+        );
+      }
+    } else {
+      const existing = await this.prisma.payrollRecord.findFirst({
+        where: { month },
+      });
+      if (existing) {
+        throw new BadRequestException(`Payroll already exists for ${month}`);
+      }
+    }
+
+    // ✅ 4. Build employee query filter
+    const employeeFilter: any = {
       isActive: true,
     };
 
-    if (employeeIds) {
-      employeeFilter.id = { in: employeeIds };
-    }
-
-    if (departmentId) {
+    if (resolvedEmployeeIds && resolvedEmployeeIds.length > 0) {
+      employeeFilter.id = { in: resolvedEmployeeIds };
+    } else if (departmentId) {
       employeeFilter.departmentId = departmentId;
     }
 
-    // Get employees with their latest salary details
+    // ✅ 5. Fetch employees with salary details
     const employees = await this.prisma.employee.findMany({
       where: employeeFilter,
       include: {
@@ -90,6 +110,8 @@ export class PayrollService {
       },
     });
 
+    console.log(employees);
+
     const payrollRecords: any[] = [];
     const errors: string[] = [];
 
@@ -101,23 +123,24 @@ export class PayrollService {
           errors.push(
             `No salary details found for employee ${employee.employeeId}`,
           );
+
           continue;
         }
 
-        // Calculate attendance for the month
+        // ✅ 6. Calculate attendance
         const attendanceStats = await this.calculateMonthlyAttendance(
           employee.id,
           month,
         );
 
-        // Calculate payroll components
+        // ✅ 7. Calculate payroll components
         const payrollData = this.calculatePayroll(
           salaryDetail,
           attendanceStats,
           employee,
         );
 
-        // Create payroll record
+        // ✅ 8. Create payroll record
         const payrollRecord = await this.prisma.payrollRecord.create({
           data: {
             employeeId: employee.id,
@@ -1403,7 +1426,7 @@ export class PayrollService {
     });
 
     const validationErrors: any[] = [];
-    const warnings:any[] = [];
+    const warnings: any[] = [];
 
     payrollRecords.forEach((record) => {
       // Check for negative net pay
@@ -1472,18 +1495,8 @@ export class PayrollService {
             id: true,
             fullName: true,
             employeeId: true,
-            department: {
-              select: {
-                id: true,
-                deptName: true,
-              },
-            },
-            role: {
-              select: {
-                id: true,
-                roleName: true,
-              },
-            },
+            department: { select: { id: true, deptName: true } },
+            role: { select: { id: true, roleName: true } },
           },
         },
       },

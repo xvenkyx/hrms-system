@@ -1,5 +1,6 @@
 // API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https:hrms-system-production-3c6e.up.railway.app';
+// export const API_BASE_URL = import.meta.env.VITE_API_URL || 'https:hrms-system-production-3c6e.up.railway.app';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 // Role Constants
 export const ROLES = {

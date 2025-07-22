@@ -1,10 +1,17 @@
-import api from './api';
-import type { Employee, CreateEmployeeRequest, UpdateEmployeeRequest, Role, Department, Manager } from '../types';
+import api from "./api";
+import type {
+  Employee,
+  CreateEmployeeRequest,
+  UpdateEmployeeRequest,
+  Role,
+  Department,
+  Manager,
+} from "../types";
 
 export const employeeApi = {
   // Get all employees
   getEmployees: async (): Promise<Employee[]> => {
-    const response = await api.get('/employees');
+    const response = await api.get("/employees");
     return response.data;
   },
 
@@ -16,12 +23,15 @@ export const employeeApi = {
 
   // Create employee
   createEmployee: async (data: CreateEmployeeRequest): Promise<Employee> => {
-    const response = await api.post('/employees', data);
+    const response = await api.post("/employees", data);
     return response.data;
   },
 
   // Update employee
-  updateEmployee: async (id: string, data: UpdateEmployeeRequest): Promise<Employee> => {
+  updateEmployee: async (
+    id: string,
+    data: UpdateEmployeeRequest
+  ): Promise<Employee> => {
     const response = await api.patch(`/employees/${id}`, data);
     return response.data;
   },
@@ -39,17 +49,26 @@ export const employeeApi = {
 
   // Get roles
   getRoles: async (): Promise<Role[]> => {
-    const response = await api.get('/roles');
+    const response = await api.get("/roles");
     return response.data;
   },
 
   // Get departments
   getDepartments: async (): Promise<Department[]> => {
-    const response = await api.get('/departments');
+    const response = await api.get("/departments");
     return response.data;
   },
   getSalaryDetails: async () => {
     const res = await api.get("/payroll/salary-details");
     return res.data;
+  },
+
+  getEmployeesByDepartment: async (
+    departmentId: string
+  ): Promise<Employee[]> => {
+    const response = await api.get(`/employees`, {
+      params: { departmentId },
+    });
+    return response.data;
   },
 };

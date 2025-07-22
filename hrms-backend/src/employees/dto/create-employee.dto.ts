@@ -1,39 +1,60 @@
-import { IsEmail, IsString, IsOptional, IsDateString, IsUUID, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  ValidateNested,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class SalaryDetailInput {
+  @IsNumber()
+  basicSalary: number;
+
+  @IsOptional()
+  @IsString()
+  effectiveFrom?: string;
+}
 
 export class CreateEmployeeDto {
   @IsString()
-  @MinLength(3)
-  employeeId: string;
+  @IsNotEmpty()
+  employeeId: string; // ✅ Add this
 
-  @IsEmail()
+  @IsString()
+  @IsNotEmpty()
+  fullName: string;
+
+  @IsString()
+  @IsNotEmpty()
   email: string;
 
   @IsString()
-  @MinLength(6)
+  @IsNotEmpty()
   password: string;
 
   @IsString()
-  @MinLength(2)
-  fullName: string;
-
-  @IsOptional()
-  @IsString()
-  phone?: string;
-
-  @IsOptional()
-  @IsString()
-  address?: string;
-
-  @IsDateString()
-  dateOfJoining: string;
-
-  @IsUUID()
+  @IsNotEmpty()
   roleId: string;
 
-  @IsUUID()
+  @IsString()
+  @IsNotEmpty()
   departmentId: string;
 
   @IsOptional()
-  @IsUUID()
-  managerId?: string;
+  phone?: string;
+
+  @IsOptional()
+  address?: string;
+
+  @ValidateNested()
+  @Type(() => SalaryDetailInput)
+  salaryDetail: SalaryDetailInput;
+
+  @IsString()
+  @IsNotEmpty()
+  dateOfJoining: string;
+
+  @IsString()
+  createdBy: string; // whoever is creating the employee (e.g., admin)
 }

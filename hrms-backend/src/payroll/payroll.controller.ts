@@ -29,8 +29,14 @@ export class PayrollController {
 
   @Post('generate')
   @Roles('ADMIN', 'HR')
-  generatePayroll(@Body() generatePayrollDto: GeneratePayrollDto, @Request() req) {
-    return this.payrollService.generatePayrollForMonth(generatePayrollDto, req.user.id);
+  generatePayroll(
+    @Body() generatePayrollDto: GeneratePayrollDto,
+    @Request() req,
+  ) {
+    return this.payrollService.generatePayrollForMonth(
+      generatePayrollDto,
+      req.user.id,
+    );
   }
 
   @Get('summary/:month')
@@ -81,22 +87,17 @@ export class PayrollController {
     return this.payrollService.create(createPayrollDto);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string, @Request() req) {
-    return this.payrollService.findOne(id, req.user.id, req.user.role.roleName);
-  }
-
   @Get(':id/payslip')
   async generatePayslip(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @Request() req,
     @Res() res: Response,
     @Query('format') format: string = 'html',
   ) {
     const payslipData = await this.payrollService.generatePayslip(
-      id, 
-      req.user.id, 
-      req.user.role.roleName
+      id,
+      req.user.id,
+      req.user.role.roleName,
     );
 
     if (format === 'html') {
@@ -127,7 +128,14 @@ export class PayrollController {
   }
 
   @Get('salary-details')
+  @Roles('HR') // ✅ restrict this route to HR role only
   async getSalaryDetails() {
+    console.log('Hit');
     return this.payrollService.getAllSalaryDetails();
+  }
+  
+  @Get(':id')
+  findOne(@Param('id') id: string, @Request() req) {
+    return this.payrollService.findOne(id, req.user.id, req.user.role.roleName);
   }
 }

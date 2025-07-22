@@ -12,4 +12,4 @@ export class GeneratePayrollDto {
   @IsOptional()
   @IsString()
   departmentId?: string;
-}
+} 

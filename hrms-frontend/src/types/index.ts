@@ -95,6 +95,7 @@ export interface Employee {
   };
   createdAt: string;
   updatedAt: string;
+  salaryDetails?: SalaryDetail[];
 }
 
 export interface CreateEmployeeRequest {
@@ -108,7 +109,14 @@ export interface CreateEmployeeRequest {
   roleId: string;
   departmentId: string;
   managerId?: string;
+
+  // ✅ Correct nested salaryDetail
+  salaryDetail: {
+    basicSalary: string;
+    effectiveFrom?: string;
+  };
 }
+
 
 export interface UpdateEmployeeRequest {
   employeeId?: string;
@@ -288,36 +296,36 @@ export interface PayrollRecord {
   id: string;
   employeeId: string;
   month: string;
-  
+
   // Earnings
   basicSalary: number;
   hra: number;
   fuelAllowance: number;
   performanceIncentive: number;
   otherEarnings: number;
-  
+
   // Deductions
   pfDeduction: number;
   ptDeduction: number;
   otherDeductions: number;
-  
+
   // Calculated fields
   totalEarnings: number;
   totalDeductions: number;
   netPay: number;
-  
+
   // Attendance info
   totalDays: number;
   daysPresent: number;
   arrearDays: number;
   lwpDays: number;
-  
+
   payslipUrl?: string;
   generatedBy?: string;
   generatedAt?: string;
-  status: 'DRAFT' | 'GENERATED' | 'SENT';
+  status: "DRAFT" | "GENERATED" | "SENT";
   createdAt: string;
-  
+
   employee: {
     id: string;
     fullName: string;
@@ -363,7 +371,7 @@ export interface PayrollQueryParams {
   year?: string;
   employeeId?: string;
   departmentId?: string;
-  status?: 'DRAFT' | 'GENERATED' | 'SENT';
+  status?: "DRAFT" | "GENERATED" | "SENT";
 }
 
 export interface PayrollSummary {
@@ -377,17 +385,20 @@ export interface PayrollSummary {
     generated: number;
     sent: number;
   };
-  departmentBreakdown: Record<string, {
-    count: number;
-    totalNetPay: number;
-    totalEarnings: number;
-    totalDeductions: number;
-  }>;
+  departmentBreakdown: Record<
+    string,
+    {
+      count: number;
+      totalNetPay: number;
+      totalEarnings: number;
+      totalDeductions: number;
+    }
+  >;
 }
 
 export interface BulkActionRequest {
   payrollIds: string[];
-  action: 'DRAFT' | 'GENERATED' | 'SENT';
+  action: "DRAFT" | "GENERATED" | "SENT";
 }
 
 export interface YearlyStatsData {
@@ -409,7 +420,7 @@ export interface YearlyStats {
 export interface SalaryDetail {
   id: string;
   employeeId: string;
-  basicSalary: number;
+  basicSalary: string;
   hra: number;
   fuelAllowance: number;
   otherAllowances: number;
